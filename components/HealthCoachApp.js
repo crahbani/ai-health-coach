@@ -1,32 +1,14 @@
-import { useState, useEffect } from 'react';
-import { Button } from "../components/ui/button";
+import { useState } from 'react';
 import { Card, CardContent } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
+import { Button } from "../components/ui/button";
 
 export default function HealthCoachApp() {
   const [transcript, setTranscript] = useState('');
   const [response, setResponse] = useState('');
-  const [isListening, setIsListening] = useState(false);
   const [goals, setGoals] = useState([]);
   const [reminders, setReminders] = useState([]);
-
-  const startListening = () => {
-    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = 'en-US';
-    recognition.start();
-    setIsListening(true);
-
-    recognition.onresult = (event) => {
-      const speechToText = event.results[0][0].transcript;
-      setTranscript(speechToText);
-      fetchGPTResponse(speechToText);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-  };
 
   const fetchGPTResponse = async (text) => {
     try {
@@ -44,13 +26,22 @@ export default function HealthCoachApp() {
         setReminders((prev) => [...prev, { text: data.reminder, time: data.time }] );
       }
 
-      // Optional: Speak the AI response aloud
       const synth = window.speechSynthesis;
       const utterance = new SpeechSynthesisUtterance(data.reply);
       synth.speak(utterance);
 
     } catch (error) {
       console.error('Error fetching response:', error);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setTranscript(e.target.value);
+  };
+
+  const handleSend = () => {
+    if (transcript.trim()) {
+      fetchGPTResponse(transcript);
     }
   };
 
@@ -65,10 +56,16 @@ export default function HealthCoachApp() {
       <Card>
         <CardContent className="space-y-2">
           <h2 className="text-xl font-semibold">🎤 Talk to Your Coach</h2>
-          <Button onClick={startListening} disabled={isListening}>
-            {isListening ? 'Listening...' : 'Speak'}
-          </Button>
-          <Textarea value={transcript} readOnly placeholder="Your spoken text will appear here" />
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              value={transcript}
+              onChange={handleInputChange}
+              placeholder="Tap microphone on your keyboard to speak"
+              autoFocus
+            />
+            <Button onClick={handleSend}>Send</Button>
+          </div>
           <h3 className="text-lg font-medium">🧠 Coach Says:</h3>
           <Textarea value={response} readOnly placeholder="AI response will show here" />
         </CardContent>
@@ -81,9 +78,12 @@ export default function HealthCoachApp() {
             <div key={i} className="flex justify-between items-center">
               <span className={goal.done ? 'line-through text-gray-500' : ''}>{goal.text}</span>
               {!goal.done && (
-                <Button size="sm" onClick={() => markGoalDone(i)}>
+                <button
+                  className="bg-blue-500 text-white px-2 py-1 rounded"
+                  onClick={() => markGoalDone(i)}
+                >
                   Done
-                </Button>
+                </button>
               )}
             </div>
           ))}
