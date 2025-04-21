@@ -1,3 +1,4 @@
+// pages/api/ask.js
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Only POST requests allowed' });
@@ -20,23 +21,27 @@ export default async function handler(req, res) {
     });
 
     const json = await openaiRes.json();
-    const reply = json.choices?.[0]?.message?.content;
 
+    console.log("🔍 OpenAI raw response:", JSON.stringify(json, null, 2));
+
+    const reply = json.choices?.[0]?.message?.content?.trim() || "Sorry, I didn't quite catch that. Could you rephrase it?";
+
+    // Example logic to extract "goal" or "reminder" based on prompt — you can make this smarter later.
     let goal = null;
     let reminder = null;
     let time = null;
 
-    if (prompt.toLowerCase().includes("goal")) {
+    if (/goal|want to|plan to/i.test(prompt)) {
       goal = prompt;
     }
-    if (prompt.toLowerCase().includes("remind")) {
+    if (/remind|reminder|remember/i.test(prompt)) {
       reminder = prompt;
       time = new Date().toLocaleTimeString();
     }
 
     res.status(200).json({ reply, goal, reminder, time });
   } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ error: "GPT failed" });
+    console.error("❌ API Error:", error);
+    res.status(500).json({ reply: "Something went wrong. Please try again later." });
   }
 }
